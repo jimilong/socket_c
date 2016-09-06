@@ -109,51 +109,52 @@ int main(int argc, char **argv)
     server_addr.sin_port = htons(HELLO_WORLD_SERVER_PORT);
     socklen_t server_addr_length = sizeof(server_addr);
     
-	    //向服务器发起连接,连接成功后client_socket代表了客户机和服务器的一个socket连接
-	    if(connect(client_socket,(struct sockaddr*)&server_addr, server_addr_length) < 0)
-	    {
-	        printf("Can Not Connect To %s!\n",argv[1]);
-	        exit(1);
-	    }
-    
-		Packet packet;
-	    memset(&packet,0,sizeof(Packet));
-	    char *pData = "hello socket server!";
-	    memcpy(packet.Data, pData, NET_PACKET_DATA_SIZE);
-	    packet.nDataLen = NET_PACKET_DATA_SIZE;
-	    //向服务器发送buffer中的数据
-	    send(client_socket, (char *)&packet, sizeof(packet), 0);
-	    printf("send success\n");
+    //向服务器发起连接,连接成功后client_socket代表了客户机和服务器的一个socket连接
+    if(connect(client_socket,(struct sockaddr*)&server_addr, server_addr_length) < 0)
+    {
+        printf("Can Not Connect To %s!\n",argv[1]);
+        exit(1);
+    }
+    while(1) {
+        Packet packet;
+        memset(&packet,0,sizeof(Packet));
+        char *pData = "hello socket server!";
+        memcpy(packet.Data, pData, NET_PACKET_DATA_SIZE);
+        packet.nDataLen = NET_PACKET_DATA_SIZE;
+        //向服务器发送buffer中的数据
+        send(client_socket, (char *)&packet, sizeof(packet), 0);
+        printf("send success\n");
 
-	    sleep(1);
-	    int len;
-	    PACKAGE_HEAD *pPackageHead;
-	    char PackageHead[1024];
-	    char PackageContext[1024*20];
-	    memset(PackageHead,0,sizeof(PACKAGE_HEAD));
-	    len = RecvSize(client_socket, (char*)PackageHead,sizeof(PACKAGE_HEAD));
-	    printf("header_server_len:%d\n", len);
-	    if( len == SOCKET_ERROR )
-	    {
-	    	fputs("error",stdout);
-	        return SOCKET_ERROR;
-	    }
-	    if(len == 0)
-	    {
-	    	fputs("error",stdout);
-	        return -1;
-	    }
-	    pPackageHead = (PACKAGE_HEAD *)PackageHead;
-	    printf("data_server_len:%d\n", pPackageHead->nDataLen);
-	    memset(PackageContext,0,sizeof(PackageContext));
-	    if(pPackageHead->nDataLen>0)
-	    {
-	        len = RecvSize(client_socket, (char*)PackageContext,pPackageHead->nDataLen);
-	    }
-	    printf("revc_server-data:%s\n", PackageContext);
-	    //关闭socket
-    	close(client_socket);
- 
+        int len;
+        PACKAGE_HEAD *pPackageHead;
+        char PackageHead[1024];
+        char PackageContext[1024*20];
+        memset(PackageHead,0,sizeof(PACKAGE_HEAD));
+        len = RecvSize(client_socket, (char*)PackageHead,sizeof(PACKAGE_HEAD));
+        printf("header_server_len:%d\n", len);
+        if( len == SOCKET_ERROR )
+        {
+            fputs("error",stdout);
+            return SOCKET_ERROR;
+        }
+        if(len == 0)
+        {
+            fputs("error",stdout);
+            return -1;
+        }
+        pPackageHead = (PACKAGE_HEAD *)PackageHead;
+        printf("data_server_len:%d\n", pPackageHead->nDataLen);
+        memset(PackageContext,0,sizeof(PackageContext));
+        if(pPackageHead->nDataLen>0)
+        {
+            len = RecvSize(client_socket, (char*)PackageContext,pPackageHead->nDataLen);
+        }
+        printf("revc_server-data:%s\n", PackageContext);
+        
+        sleep(1);
+    }
+    //关闭socket
+    close(client_socket);
     
     return 0;
 }

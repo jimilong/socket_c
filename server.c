@@ -109,45 +109,63 @@ int main(int argc, char **argv)
     char PackageHead[1024];
     char PackageContext[1024*20];
 
+    fd_set read_set,ready_set;
+    FD_ZERO(&read_set);
+    FD_SET(sockfd, &read_set);
     int len;
     PACKAGE_HEAD *pPackageHead;
+    int i = 1;
     while(1)
     {
-        int sock_client = accept(sockfd,(struct sockaddr *)&claddr, &length);
+        ready_set = read_set;
+        select(sockfd + 1, &ready_set, NULL, NULL, NULL);
+        if (FD_ISSET(sockfd, &ready_set)) {
+            int sock_client = accept(sockfd,(struct sockaddr *)&claddr, &length);
             printf("%d\n",++count);
             if( sock_client <0 ){
                     perror("accept error");
                     exit(1);
             }
-        memset(PackageHead,0,sizeof(PACKAGE_HEAD));
-        len = RecvSize(sock_client, (char*)PackageHead,sizeof(PACKAGE_HEAD));
-        printf("header_client_len:%d\n", len);
-        if( len == SOCKET_ERROR )
-        {
-            break;
-        }
-        if(len == 0)
-        {
-            break;
-        }
-        pPackageHead = (PACKAGE_HEAD *)PackageHead;
-        printf("data_client_len:%d\n", pPackageHead->nDataLen);
-        memset(PackageContext,0,sizeof(PackageContext));
-        if(pPackageHead->nDataLen>0)
-        {
-            len = RecvSize(sock_client, (char*)PackageContext,pPackageHead->nDataLen);
-        }
-        printf("revc_client-data:%s\n", PackageContext);
-        /////////
-        Packet packet;
-        memset(&packet,0,sizeof(Packet));
-        char *pData = "hello socket client!";
-        memcpy(packet.Data, pData, NET_PACKET_DATA_SIZE);
-        packet.nDataLen = NET_PACKET_DATA_SIZE;
-        send(sock_client, (char *)&packet, sizeof(packet), 0);
-        printf("send success\n");
 
-        close(sock_client);
+            if (fork() == 0) {
+                close(sockfd);
+                while(1) {
+                    memset(PackageHead,0,sizeof(PACKAGE_HEAD));
+                    len = RecvSize(sock_client, (char*)PackageHead,sizeof(PACKAGE_HEAD));
+                    printf("header_client_len:%d\n", len);
+                    if( len == SOCKET_ERROR )
+                    {
+                        break;
+                    }
+                    if(len == 0)
+                    {
+                        break;
+                    }
+                    pPackageHead = (PACKAGE_HEAD *)PackageHead;
+                    printf("data_client_len:%d\n", pPackageHead->nDataLen);
+                    memset(PackageContext,0,sizeof(PackageContext));
+                    if(pPackageHead->nDataLen>0)
+                    {
+                        len = RecvSize(sock_client, (char*)PackageContext,pPackageHead->nDataLen);
+                    }
+                    printf("data from client %d\n", i);
+                    printf("revc_client-data:%s-%d\n", PackageContext, i);
+                    /////////
+                    Packet packet;
+                    memset(&packet,0,sizeof(Packet));
+                    char *pData = "hello socket client!";
+                    memcpy(packet.Data, pData, NET_PACKET_DATA_SIZE);
+                    packet.nDataLen = NET_PACKET_DATA_SIZE;
+                    send(sock_client, (char *)&packet, sizeof(packet), 0);
+                    printf("send success\n");
+                }
+                close(sock_client);
+                exit(0);
+            }
+            
+            i++;
+            close(sock_client);
+        }
     }
     fputs("Bye Cleey",stdout);
     close(sockfd);
